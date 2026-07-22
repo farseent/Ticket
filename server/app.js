@@ -1,11 +1,13 @@
 const express = require("express");
 const cors = require("cors");
+const coockieParser = require("cookie-parser")
 const errorHandler = require("./middlewares/errorHandler")
 
 const app = express();
 
 app.use(cors({origin: process.env.CLIENT_URL, credentials: true}));
 app.use(express.json());
+app.use(coockieParser());
 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/leads", require("./routes/leadRoutes"));

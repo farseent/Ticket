@@ -275,9 +275,11 @@ exports.getLeadById = async (req, res, next) => {
 
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
+    console.log('Lead AssignedB:', lead.assignedB, 'Req User ID:', req.user._id);
+
     // Role-based visibility guard (not just UI-level filtering)
     const { role, _id } = req.user;
-    if (role === 'B' && String(lead.assignedB) !== String(_id)) {
+    if (role === 'B' && String(lead.assignedB?._id || lead.assignedB) !== String(_id)) {
       const e = new Error('You do not have access to this lead');
       e.statusCode = 403;
       throw e;

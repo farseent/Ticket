@@ -9,8 +9,8 @@ const optionSchema = new mongoose.Schema(
     // Flight Details
     airline: { type: String, required: true, trim: true },
     route: { type: String, required: true, trim: true },
-    departTime: { type: Date, required: true },
-    arriveTime: { type: Date, required: true },
+    departTime: { type: String, required: true },
+    arriveTime: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
     layovers: { type: String, default: 'Direct' },
     notes: { type: String, default: '', trim: true },
