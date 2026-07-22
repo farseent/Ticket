@@ -1,0 +1,81 @@
+# ==========================================
+# 1. Environment Variables & Secrets (CRITICAL)
+# ==========================================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+!.env.example
+
+# ==========================================
+# 2. Dependencies
+# ==========================================
+node_modules/
+/node_modules
+/.pnp
+.pnp.js
+
+# ==========================================
+# 3. Production Build Outputs
+# ==========================================
+# Frontend (Vite / React)
+dist/
+dist-ssr/
+build/
+*.local
+
+# Backend
+out/
+bin/
+
+# ==========================================
+# 4. Logs & Debugging
+# ==========================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# 5. Editor & IDE Settings
+# ==========================================
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==========================================
+# 6. Operating System Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==========================================
+# 7. Testing & Coverage
+# ==========================================
+coverage/
+.nyc_output/
+*.lcov
+
+# ==========================================
+# 8. Cache & Temporary Files
+# ==========================================
+.eslintcache
+.stylelintcache
+.vite/
+.cache/
