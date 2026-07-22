@@ -1,29 +1,38 @@
-import { createContext, useState } from 'react';
-import api from '../api/client';
+import { createContext, useEffect, useState } from 'react';
+import { loginUser, logoutUser, fetchCurrentUser, registerUser } from '../api/auth';
 
 export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // On app load / refresh, ask the server if the httpOnly cookie is still valid.
+  // There's no token in localStorage to read anymore, so this replaces that check.
+  useEffect(() => {
+    fetchCurrentUser()
+      .then((data) => setUser(data.user))
+      .catch(() => setUser(null))
+      .finally(() => setCheckingSession(false));
+  }, []);
 
   const login = async (email, password) => {
-    const res = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('user', JSON.stringify(res.data.user));
-    setUser(res.data.user);
+    const data = await loginUser({ email, password });
+    setUser(data.user);
+  };
+  
+  const register = async (payload) => {
+    const data = await registerUser( payload );
+    setUser(data.user);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const logout = async () => {
+    await logoutUser();
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout, checkingSession }}>
       {children}
     </AuthContext.Provider>
   );
