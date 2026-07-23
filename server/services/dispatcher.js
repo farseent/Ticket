@@ -46,36 +46,62 @@ async function dispatchStage1(lead, session) {
   }
 }
 
-async function tryCompileAndAssignD(lead, session) {
-  const activeCUsers = await User.find({ role: 'C', isActive: true }).session(session);
-  const submittedOptions = await Option.find({
-    lead: lead._id,
-    round: lead.currentRevisionRound,
-  }).session(session);
+// async function tryCompileAndAssignD(lead, session) {
+//   const activeCUsers = await User.find({ role: 'C', isActive: true }).session(session);
+//   const submittedOptions = await Option.find({
+//     lead: lead._id,
+//     round: lead.currentRevisionRound,
+//   }).session(session);
 
-  const submittedByIds = new Set(submittedOptions.map((o) => String(o.submittedBy)));
-  const allCSubmitted = activeCUsers.every((u) => submittedByIds.has(String(u._id)));
+//   const submittedByIds = new Set(submittedOptions.map((o) => String(o.submittedBy)));
+//   const allCSubmitted = activeCUsers.every((u) => submittedByIds.has(String(u._id)));
 
-  if (!allCSubmitted) return { compiled: false };
+//   if (!allCSubmitted) return { compiled: false };
 
-  assertTransition(lead.status, 'PENDING_D_ASSIGN');
-  lead.status = 'PENDING_D_ASSIGN';
+//   assertTransition(lead.status, 'PENDING_D_ASSIGN');
+//   lead.status = 'PENDING_D_ASSIGN';
 
+//   let dUser;
+//   if (lead.assignedD) {
+//     // Sticky routing: revision cycle, same D as before
+//     dUser = await User.findById(lead.assignedD).session(session);
+//   } else {
+//     const dUsers = await User.find({ role: 'D', isActive: true })
+//       .sort('_id')
+//       .session(session);
+//     if (dUsers.length === 0) throw appError('No active D users available', 503);
+
+//     let state = await DispatcherState.findOne({ _id: 'GLOBAL' }).session(session);
+//     if (!state) {
+//       state = new DispatcherState({ _id: 'GLOBAL', stage1Toggle: 'B_TURN', bPointerIndex: 0, dPointerIndex: 0 });
+//     }
+
+//     const idx = state.dPointerIndex % dUsers.length;
+//     dUser = dUsers[idx];
+//     state.dPointerIndex += 1;
+//     await state.save({ session });
+
+//     lead.assignedD = dUser._id;
+//   }
+
+//   assertTransition(lead.status, 'ASSIGNED_D');
+//   lead.status = 'ASSIGNED_D';
+
+//   return { compiled: true, assignedD: dUser._id };
+// }
+
+async function assignD(lead, session) {
   let dUser;
   if (lead.assignedD) {
-    // Sticky routing: revision cycle, same D as before
-    dUser = await User.findById(lead.assignedD).session(session);
+    dUser = await User.findById(lead.assignedD).session(session); // sticky
   } else {
-    const dUsers = await User.find({ role: 'D', isActive: true })
-      .sort('_id')
-      .session(session);
+    const dUsers = await User.find({ role: 'D', isActive: true }).sort('_id').session(session);
     if (dUsers.length === 0) throw appError('No active D users available', 503);
 
     let state = await DispatcherState.findOne({ _id: 'GLOBAL' }).session(session);
     if (!state) {
       state = new DispatcherState({ _id: 'GLOBAL', stage1Toggle: 'B_TURN', bPointerIndex: 0, dPointerIndex: 0 });
     }
-
     const idx = state.dPointerIndex % dUsers.length;
     dUser = dUsers[idx];
     state.dPointerIndex += 1;
@@ -83,12 +109,10 @@ async function tryCompileAndAssignD(lead, session) {
 
     lead.assignedD = dUser._id;
   }
-
-  assertTransition(lead.status, 'ASSIGNED_D');
-  lead.status = 'ASSIGNED_D';
-
-  return { compiled: true, assignedD: dUser._id };
+  return dUser;
 }
+
+module.exports = { dispatchStage1, assignD };
 
 function appError(msg, code) {
   const e = new Error(msg);
@@ -96,4 +120,4 @@ function appError(msg, code) {
   return e;
 }
 
-module.exports = { dispatchStage1, tryCompileAndAssignD };
+module.exports = { dispatchStage1, assignD };

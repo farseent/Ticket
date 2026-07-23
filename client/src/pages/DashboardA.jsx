@@ -5,12 +5,13 @@ import DispatcherStatePanel from '../components/dispatcher/DispatcherStatePanel'
 import LeadTable from '../components/leads/LeadTable';
 import LeadFilterBar from '../components/leads/LeadFilterBar';
 import AuditLogViewer from '../components/leads/AuditLogViewer';
+import RevisionPendingCard from '../components/leads/RevisionPendingCard';
 import ErrorBanner from '../components/common/ErrorBanner';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatCard from '../components/common/StatCard';
 import Modal from '../components/common/Modal';
 import { useLeads } from '../hooks/useLeads';
-import { createLead, fetchAuditLog } from '../api/leads';
+import { createLead, fetchAuditLog, resendToCGroup } from '../api/leads';
 import { fetchDispatcherState } from '../api/dispatcher';
 
 export default function DashboardA() {
@@ -22,6 +23,8 @@ export default function DashboardA() {
   const [auditLogs, setAuditLogs] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [resendingId, setResendingId] = useState(null);
+  const [resendError, setResendError] = useState('');
 
   const loadDispatcherState = async () => {
     setDispatcherState(await fetchDispatcherState());
@@ -48,36 +51,71 @@ export default function DashboardA() {
     setAuditLogs(data.logs);
   };
 
+  const handleResend = async (leadId) => {
+    setResendError('');
+    setResendingId(leadId);
+    try {
+      await resendToCGroup(leadId);
+      await refresh();
+    } catch (err) {
+      setResendError(err.response?.data?.error || 'Failed to resend to C group');
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const pendingRevisions = useMemo(
+    () => leads.filter((l) => l.status === 'REVISION_PENDING_A'),
+    [leads]
+  );
+
   const stats = useMemo(() => ({
     total: leads.length,
     active: leads.filter((l) => l.status !== 'CONFIRMED').length,
     confirmed: leads.filter((l) => l.status === 'CONFIRMED').length,
-    revision: leads.filter((l) => l.status === 'REVISION_REQUESTED').length,
-  }), [leads]);
+    revision: pendingRevisions.length,
+  }), [leads, pendingRevisions]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((l) => {
       const matchesSearch = l.clientName.toLowerCase().includes(search.toLowerCase());
       const matchesStatus =
         statusFilter === 'ALL' ? true :
-        statusFilter === 'ACTIVE' ? l.status !== 'CONFIRMED' && l.status !== 'REVISION_REQUESTED' :
+        statusFilter === 'ACTIVE' ? l.status !== 'CONFIRMED' && l.status !== 'REVISION_PENDING_A' :
         statusFilter === 'CONFIRMED' ? l.status === 'CONFIRMED' :
-        l.status === 'REVISION_REQUESTED';
+        l.status === 'REVISION_PENDING_A';
       return matchesSearch && matchesStatus;
     });
   }, [leads, search, statusFilter]);
 
   return (
     <PageContainer>
-      <Navbar title="Role A — Sales Executive" />
+      <Navbar />
       <DispatcherStatePanel state={dispatcherState} />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <StatCard label="Total leads" value={stats.total} accent="bg-slate-300" />
         <StatCard label="In progress" value={stats.active} accent="bg-indigo-400" />
         <StatCard label="Confirmed" value={stats.confirmed} accent="bg-emerald-400" />
-        <StatCard label="Needs revision" value={stats.revision} accent="bg-rose-400" />
+        <StatCard label="Needs your review" value={stats.revision} accent="bg-amber-400" />
       </div>
+
+      {pendingRevisions.length > 0 && (
+        <div className="mb-6">
+          <h2 className="font-semibold text-slate-800 mb-3">Pending Your Review</h2>
+          <ErrorBanner message={resendError} />
+          <div className="space-y-3 mt-2">
+            {pendingRevisions.map((lead) => (
+              <RevisionPendingCard
+                key={lead._id}
+                lead={lead}
+                onResend={handleResend}
+                busy={resendingId === lead._id}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-100">
         <div className="flex justify-between items-center px-4 py-4 border-b border-slate-100">
@@ -92,6 +130,12 @@ export default function DashboardA() {
         <LeadFilterBar
           search={search} onSearchChange={setSearch}
           statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
+          filters={[
+            { key: 'ALL', label: 'All' },
+            { key: 'ACTIVE', label: 'In progress' },
+            { key: 'CONFIRMED', label: 'Confirmed' },
+            { key: 'REVISION_PENDING_A', label: 'Needs revision' },
+          ]}
         />
         <ErrorBanner message={error} />
         {loading ? <LoadingSpinner /> : <LeadTable leads={filteredLeads} onViewAuditLog={viewAuditLog} />}

@@ -9,7 +9,10 @@ import EmptyState from '../components/common/EmptyState';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { useLeads } from '../hooks/useLeads';
 import { useLeadDetail } from '../hooks/useLeadDetails';
-import { submitOption, contactClient, confirmLead } from '../api/leads';
+import { submitOption, contactClient, confirmLead, selectOption } from '../api/leads';
+
+// B can select/re-select an option only once contact has been logged
+const SELECTABLE_STATUSES = ['CLIENT_CONTACTED_B', 'OPTION_SELECTED_B'];
 
 export default function DashboardB() {
   const { leads, loading, refresh } = useLeads();
@@ -43,6 +46,17 @@ export default function DashboardB() {
     }
   };
 
+  const handleSelectOption = async (optionId) => {
+    setActionError('');
+    try {
+      await selectOption(detail.lead._id, optionId);
+      await refreshDetail();
+      await refresh();
+    } catch (err) {
+      setActionError(err.response?.data?.error || 'Failed to select option');
+    }
+  };
+
   const handleConfirm = async () => {
     setActionError('');
     try {
@@ -50,13 +64,16 @@ export default function DashboardB() {
       await refreshDetail();
       await refresh();
     } catch (err) {
-      setActionError(err.response?.data?.error || 'Failed to confirm');
+      setActionError(err.response?.data?.error || 'Failed to confirm booking');
     }
   };
 
+  const canSelectOption = detail && SELECTABLE_STATUSES.includes(detail.lead.status);
+  const canConfirm = detail && !!detail.lead.selectedOption && detail.lead.status !== 'CONFIRMED';
+
   return (
     <PageContainer>
-      <Navbar title="Role B — Ticketing Agent" />
+      <Navbar />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 md:col-span-1 overflow-hidden">
           <h2 className="font-semibold text-slate-800 px-4 py-4 border-b border-slate-100">My Leads</h2>
@@ -85,15 +102,32 @@ export default function DashboardB() {
             </div>
           )}
           {detail && (
-            <LeadDetailPanel detail={detail} error={error || actionError}>
+            <LeadDetailPanel
+              detail={detail}
+              error={error || actionError}
+              onSelectOption={handleSelectOption}
+              canSelectOption={canSelectOption}
+            >
               <OptionForm onSubmit={handleSubmitOption} />
               <ContactAttemptForm onSubmit={handleLogContact} />
-              <button
-                onClick={handleConfirm}
-                className="w-full bg-emerald-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-emerald-700 transition-colors"
-              >
-                Confirm Booking
-              </button>
+              <div>
+                <button
+                  onClick={handleConfirm}
+                  disabled={!canConfirm}
+                  className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
+                    canConfirm
+                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  }`}
+                >
+                  Confirm Booking
+                </button>
+                {!canConfirm && detail.lead.status !== 'CONFIRMED' && (
+                  <p className="text-xs text-slate-400 mt-1.5">
+                    Select an option with the client before booking.
+                  </p>
+                )}
+              </div>
             </LeadDetailPanel>
           )}
         </div>

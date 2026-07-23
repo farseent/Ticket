@@ -11,6 +11,8 @@ const {
   getLeadById,
   getAuditLog,
   contactClient,
+  selectOption,
+  resendToCGroup,
 } = require('../controllers/leadController');
 
 const { protect, restrictTo } = require('../middlewares/auth');
@@ -41,5 +43,11 @@ router.patch('/:id/request-revision', restrictTo('D'), requestRevision);
 
 // PATCH /api/leads/:id/contact-client - B or C contact client
 router.patch('/:id/contact-client', restrictTo('B', 'D'), contactClient);
+
+// PATCH /api/leads/:id/select-option - B or D select a ticket option
+router.patch('/:id/select-option', restrictTo('B', 'D'), selectOption);
+
+// PATCH /api/leads/:id/resend-to-c - A resend the lead
+router.patch('/:id/resend-to-c', restrictTo('A'), resendToCGroup);
 
 module.exports = router;

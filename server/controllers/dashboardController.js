@@ -34,7 +34,7 @@ exports.getBDashboard = async (req, res, next) => {
 exports.getCDashboard = async (req, res, next) => {
   try {
     const leads = await Lead.find({
-      status: { $in: ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING'] },
+      status: { $in: ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING', 'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D'] },
     }).sort('-createdAt');
 
     // For each lead, show which C users (if any) have already submitted

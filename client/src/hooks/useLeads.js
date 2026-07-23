@@ -4,23 +4,25 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchLeads } from '../api/leads';
 
-export function useLeads() {
+export function useLeads(params = {}) {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+
+  const paramsKey = JSON.stringify(params);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      const data = await fetchLeads();
+      const data = await fetchLeads(JSON.parse(paramsKey));
       setLeads(data.leads);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load leads');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [paramsKey]);
 
   useEffect(() => {
     refresh();

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const Lead = require('../models/Lead');
 const Option = require('../models/Option');
 const { assertTransition } = require('../services/stateMachine');
-const { dispatchStage1, tryCompileAndAssignD } = require('../services/dispatcher');
+const { dispatchStage1, assignD } = require('../services/dispatcher');
 const { logAction } = require('../services/auditLogger');
 
 // POST /api/leads  (Role A)
@@ -59,20 +59,23 @@ exports.submitOption = async (req, res, next) => {
     const { airline, route, departTime, arriveTime, price, layovers, notes } = req.body;
 
     if (req.user.role === 'B') {
-
-      // Ownership guard: only the assigned B agent may act on this lead
       if (String(lead.assignedB) !== String(req.user._id)) {
         const e = new Error('This lead is not assigned to you');
         e.statusCode = 403;
         throw e;
       }
 
-      // Single-agent path: B searches directly, no state transition needed on first search
       if (lead.status === 'DISPATCHED_B') {
         assertTransition(lead.status, 'SEARCHING_B');
         lead.status = 'SEARCHING_B';
-        await lead.save({ session });
+      } else if (['CLIENT_CONTACTED_B', 'OPTION_SELECTED_B'].includes(lead.status)) {
+        // Client wants a fresh search — drop any tentative selection, it's stale now
+        assertTransition(lead.status, 'SEARCHING_B');
+        lead.status = 'SEARCHING_B';
+        lead.selectedOption = null;
       }
+      await lead.save({ session });
+
       await Option.create([{
         lead: lead._id, submittedBy: req.user._id, round: 0,
         airline, route, departTime, arriveTime, price, layovers, notes,
@@ -88,11 +91,13 @@ exports.submitOption = async (req, res, next) => {
     }
 
     if (req.user.role === 'C') {
-      if (lead.status !== 'DISPATCHED_C_GROUP' && lead.status !== 'OPTIONS_GATHERING') {
-        const e = new Error(`Lead not open for C submissions (status: ${lead.status})`);
+      const OPEN_STATUSES = ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING', 'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D'];
+      if (!OPEN_STATUSES.includes(lead.status)) {
+        const e = new Error(`This lead is not currently open for new options (status: ${lead.status})`);
         e.statusCode = 409;
         throw e;
       }
+
       if (lead.status === 'DISPATCHED_C_GROUP') {
         assertTransition(lead.status, 'OPTIONS_GATHERING');
         lead.status = 'OPTIONS_GATHERING';
@@ -108,22 +113,25 @@ exports.submitOption = async (req, res, next) => {
         actionType: 'OPTION_ADDED', payload: { airline, route, price },
       });
 
-      // Check if this was the LAST C user needed -> auto compile + assign D
-      const result = await tryCompileAndAssignD(lead, session);
-      if (result.compiled) {
+      let dNotifiedNow = false;
+
+      // Only the FIRST submission of this round triggers D assignment
+      if (lead.status === 'OPTIONS_GATHERING') {
+        const dUser = await assignD(lead, session);
+        dNotifiedNow = true;
+
+        assertTransition(lead.status, 'ASSIGNED_D');
+        lead.status = 'ASSIGNED_D';
+
         await logAction({
           leadId: lead._id, actorRole: 'C', actorId: req.user._id,
-          actionType: 'OPTIONS_COMPILED', payload: {},
-        });
-        await logAction({
-          leadId: lead._id, actorRole: 'C', actorId: req.user._id,
-          actionType: 'D_ASSIGNED', payload: { assignedD: result.assignedD },
+          actionType: 'D_ASSIGNED', payload: { assignedD: dUser._id },
         });
       }
 
-      await lead.save({ session });
-      await session.commitTransaction();
-      return res.json({ lead, allOptionsCompiled: result.compiled });
+  await lead.save({ session });
+  await session.commitTransaction();
+  return res.json({ lead, dNotified: dNotifiedNow });
     }
 
     const e = new Error('Only Role B or C may submit options');
@@ -140,10 +148,9 @@ exports.submitOption = async (req, res, next) => {
 // PATCH /api/leads/:id/confirm  (Role B or D)
 exports.confirmLead = async (req, res, next) => {
   try {
-    const lead = await Lead.findById(req.params.id);
+    const lead = await Lead.findById(req.params.id).populate('selectedOption');
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-    // Ownership guard: only the specifically assigned agent may confirm
     if (req.user.role === 'B' && String(lead.assignedB) !== String(req.user._id)) {
       const e = new Error('This lead is not assigned to you');
       e.statusCode = 403;
@@ -155,13 +162,25 @@ exports.confirmLead = async (req, res, next) => {
       throw e;
     }
 
-    assertTransition(lead.status, 'CONFIRMED');
+    if (!lead.selectedOption) {
+      const e = new Error('No option has been selected for this lead yet');
+      e.statusCode = 409;
+      throw e;
+    }
+
+    assertTransition(lead.status, 'CONFIRMED'); // only reachable from OPTION_SELECTED_B/D
     lead.status = 'CONFIRMED';
     await lead.save();
 
     await logAction({
       leadId: lead._id, actorRole: req.user.role, actorId: req.user._id,
-      actionType: 'TICKET_CONFIRMED', payload: { confirmedBy: req.user._id },
+      actionType: 'TICKET_CONFIRMED',
+      payload: {
+        confirmedBy: req.user._id,
+        airline: lead.selectedOption.airline,
+        route: lead.selectedOption.route,
+        price: lead.selectedOption.price,
+      },
     });
 
     res.json({ lead });
@@ -185,22 +204,24 @@ exports.requestRevision = async (req, res, next) => {
       e.statusCode = 403;
       throw e;
     }
-    
-    assertTransition(lead.status, 'REVISION_REQUESTED');
-    lead.status = 'REVISION_REQUESTED';
-    lead.currentRevisionRound += 1; // new round -> C must resubmit fresh options
-    await lead.save();
+    const { reason } = req.body;
+    if (!reason || !reason.trim()) {
+      const e = new Error('reason is required — describe what the client wants changed');
+      e.statusCode = 400;
+      throw e;
+    }
 
-    assertTransition(lead.status, 'OPTIONS_GATHERING');
-    lead.status = 'OPTIONS_GATHERING'; // re-open for C group; assignedD stays pinned
+    assertTransition(lead.status, 'REVISION_PENDING_A');
+    lead.status = 'REVISION_PENDING_A';
+    lead.pendingRevisionReason = reason;
+    lead.selectedOption = null;
+    await lead.save();
 
     await logAction({
       leadId: lead._id, actorRole: 'D', actorId: req.user._id,
-      actionType: 'REVISION_REQUESTED',
-      payload: { reason: req.body.reason, newRound: lead.currentRevisionRound },
+      actionType: 'REVISION_REQUESTED', payload: { reason },
     });
 
-    await lead.save();
     res.json({ lead });
   } catch (err) {
     next(err);
@@ -219,7 +240,11 @@ exports.getLeads = async (req, res, next) => {
     } else if (role === 'B') {
       filter = { assignedB: _id };
     } else if (role === 'C') {
-      filter = { status: { $in: ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING'] } };
+        if (req.query.all === 'true') {
+            filter = {}; // full history — no status restriction
+          } else {
+            filter = { status: { $in: ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING', 'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D'] } };
+          }
     } else if (role === 'D') {
       filter = { assignedD: _id };
     }
@@ -271,11 +296,10 @@ exports.getLeadById = async (req, res, next) => {
     const lead = await Lead.findById(req.params.id)
       .populate('assignedB', 'name email')
       .populate('assignedD', 'name email')
-      .populate('createdBy', 'name email');
+      .populate('createdBy', 'name email')
+      .populate('selectedOption');
 
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
-
-    console.log('Lead AssignedB:', lead.assignedB, 'Req User ID:', req.user._id);
 
     // Role-based visibility guard (not just UI-level filtering)
     const { role, _id } = req.user;
@@ -289,8 +313,15 @@ exports.getLeadById = async (req, res, next) => {
       e.statusCode = 403;
       throw e;
     }
-    // Role C can view any lead currently in a group-broadcast state
-    if (role === 'C' && !['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING'].includes(lead.status)) {
+    
+    // Role C can view any lead currently open for option submission —
+    // this must match the OPEN_STATUSES list used in submitOption exactly,
+    // otherwise C gets locked out of leads they're still allowed to act on.
+    const C_VISIBLE_STATUSES = [
+      'DISPATCHED_C_GROUP', 'OPTIONS_GATHERING',
+      'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D',
+    ];
+    if (role === 'C' && !C_VISIBLE_STATUSES.includes(lead.status)) {
       const e = new Error('This lead is not open to Role C');
       e.statusCode = 403;
       throw e;
@@ -374,6 +405,110 @@ exports.contactClient = async (req, res, next) => {
       leadId: lead._id, actorRole: req.user.role, actorId: req.user._id,
       actionType: 'CLIENT_CONTACT_ATTEMPTED',
       payload: { outcome, notes: notes || null },
+    });
+
+    res.json({ lead });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/leads/:id/select-option  (Role B or D)
+exports.selectOption = async (req, res, next) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    const { optionId } = req.body;
+    if (!optionId) {
+      const e = new Error('optionId is required');
+      e.statusCode = 400;
+      throw e;
+    }
+
+    // Ownership + valid pre-state, per role
+    let targetStatus;
+    if (req.user.role === 'B') {
+      if (String(lead.assignedB) !== String(req.user._id)) {
+        const e = new Error('This lead is not assigned to you');
+        e.statusCode = 403;
+        throw e;
+      }
+      if (!['CLIENT_CONTACTED_B', 'OPTION_SELECTED_B'].includes(lead.status)) {
+        const e = new Error(`Cannot select an option from status: ${lead.status}. Contact the client first.`);
+        e.statusCode = 409;
+        throw e;
+      }
+      targetStatus = 'OPTION_SELECTED_B';
+    } else if (req.user.role === 'D') {
+      if (String(lead.assignedD) !== String(req.user._id)) {
+        const e = new Error('This lead is not assigned to you');
+        e.statusCode = 403;
+        throw e;
+      }
+      if (!['CLIENT_CONTACTED_D', 'OPTION_SELECTED_D'].includes(lead.status)) {
+        const e = new Error(`Cannot select an option from status: ${lead.status}. Contact the client first.`);
+        e.statusCode = 409;
+        throw e;
+      }
+      targetStatus = 'OPTION_SELECTED_D';
+    } else {
+      const e = new Error('Only Role B or D may select an option');
+      e.statusCode = 403;
+      throw e;
+    }
+
+    // The option must genuinely belong to this lead — never trust a client-supplied ID blindly
+    const option = await Option.findOne({ _id: optionId, lead: lead._id });
+    if (!option) {
+      const e = new Error('This option was not submitted for this lead');
+      e.statusCode = 400;
+      throw e;
+    }
+
+    const isChange = lead.selectedOption && String(lead.selectedOption) !== String(optionId);
+    const isFirstSelection = !lead.selectedOption;
+
+    assertTransition(lead.status, targetStatus);
+    lead.status = targetStatus;
+    lead.selectedOption = option._id;
+    await lead.save();
+
+    await logAction({
+      leadId: lead._id, actorRole: req.user.role, actorId: req.user._id,
+      actionType: isChange ? 'OPTION_SELECTION_CHANGED' : 'OPTION_SELECTED',
+      payload: {
+        airline: option.airline, route: option.route, price: option.price,
+        wasFirstSelection: isFirstSelection,
+      },
+    });
+
+    res.json({ lead });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/leads/:id/resend-to-c  (Role A only)
+exports.resendToCGroup = async (req, res, next) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ error: 'Lead not found' });
+
+    assertTransition(lead.status, 'OPTIONS_GATHERING'); // only legal from REVISION_PENDING_A
+
+    const instructions = lead.pendingRevisionReason;
+    lead.currentRoundInstructions = instructions;
+    lead.pendingRevisionReason = null;
+    lead.currentRevisionRound += 1; // old round officially expires here
+    lead.status = 'OPTIONS_GATHERING';
+    // lead.assignedD is untouched -> sticky routing applies on the next C submission
+    await lead.save();
+
+    await logAction({
+      leadId: lead._id, actorRole: 'A', actorId: req.user._id,
+      actionType: 'LEAD_RESENT_TO_C_GROUP',
+      payload: { instructions, newRound: lead.currentRevisionRound },
     });
 
     res.json({ lead });

@@ -11,7 +11,7 @@ async function seed() {
   await User.deleteMany({});
   await DispatcherState.deleteMany({});
 
-  const password = 'password123';
+  const password = '123456';
 
   const users = await User.create([
     { name: 'Alice A', email: 'a@test.com', password, role: 'A', isActive: true },

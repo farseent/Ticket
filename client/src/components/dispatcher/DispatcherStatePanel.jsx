@@ -1,3 +1,5 @@
+import { ROLE_LABELS } from '../../utils/constants';
+
 export default function DispatcherStatePanel({ state }) {
   if (!state) return null;
   return (
@@ -6,15 +8,15 @@ export default function DispatcherStatePanel({ state }) {
       <span className="flex items-center gap-1.5 text-slate-500">
         Next turn
         <span className="font-mono font-semibold text-indigo-600">
-          {state.stage1Toggle === 'B_TURN' ? 'Role B' : 'Role C'}
+          {state.stage1Toggle === 'B_TURN' ? ROLE_LABELS.B : ROLE_LABELS.C}
         </span>
       </span>
-      <span className="flex items-center gap-1.5 text-slate-500">
-        B pointer <span className="font-mono font-semibold text-slate-800">{state.bPointerIndex}</span>
+      {/* <span className="flex items-center gap-1.5 text-slate-500">
+        {ROLE_LABELS.B} pointer <span className="font-mono font-semibold text-slate-800">{state.bPointerIndex}</span>
       </span>
       <span className="flex items-center gap-1.5 text-slate-500">
-        D pointer <span className="font-mono font-semibold text-slate-800">{state.dPointerIndex}</span>
-      </span>
+        {ROLE_LABELS.D} pointer <span className="font-mono font-semibold text-slate-800">{state.dPointerIndex}</span>
+      </span> */}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useAuth } from '../../hooks/useAuth';
 import { ROLE_LABELS, ROLE_COLORS } from '../../utils/constants';
 
-export default function Navbar({ title }) {
+export default function Navbar() {
   const { user, logout } = useAuth();
 
   return (
@@ -11,8 +11,8 @@ export default function Navbar({ title }) {
           {user.name.charAt(0)}
         </div>
         <div>
-          <h1 className="text-xl font-bold text-slate-900">{title}</h1>
-          <p className="text-sm text-slate-500">{user.name} · {ROLE_LABELS[user.role]}</p>
+          <h1 className="text-xl font-bold text-slate-900">{ROLE_LABELS[user.role]} Dashboard</h1>
+          <p className="text-sm text-slate-500">{user.name}</p>
         </div>
       </div>
       <button

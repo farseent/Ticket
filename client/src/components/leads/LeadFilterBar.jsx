@@ -1,11 +1,4 @@
-export default function LeadFilterBar({ search, onSearchChange, statusFilter, onStatusFilterChange }) {
-  const filters = [
-    { key: 'ALL', label: 'All' },
-    { key: 'ACTIVE', label: 'In progress' },
-    { key: 'CONFIRMED', label: 'Confirmed' },
-    { key: 'REVISION_REQUESTED', label: 'Needs revision' },
-  ];
-
+export default function LeadFilterBar({ search, onSearchChange, statusFilter, onStatusFilterChange, filters }) {
   return (
     <div className="flex flex-wrap gap-2 items-center px-4 py-3 border-b border-slate-100">
       <input

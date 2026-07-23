@@ -39,6 +39,10 @@ const leadSchema = new mongoose.Schema(
 
     // Revision Tracking
     currentRevisionRound: { type: Number, default: 1, min: 1,  }, // Increments each time D requests a revision back to C
+    selectedOption: { type: mongoose.Schema.Types.ObjectId, ref:'Option', default: null },
+    
+    pendingRevisionReason: { type: String, default: null }, // D's request, visible to A, cleared once resent
+    currentRoundInstructions: { type: String, default: null }, // what C should search for, shown once A resends
   },
   {
     timestamps: true, 
