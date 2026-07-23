@@ -107,28 +107,40 @@ export default function DashboardD() {
               onSelectOption={handleSelectOption}
               canSelectOption={canSelectOption}
             >
-              <ContactAttemptForm onSubmit={handleLogContact} />
-              <div>
-                <button
-                  onClick={handleConfirm}
-                  disabled={!canConfirm}
-                  className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
-                    canConfirm
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  }`}
-                >
-                  Confirm Booking
-                </button>
-                {!canConfirm && detail.lead.status !== 'CONFIRMED' && (
-                  <p className="text-xs text-slate-400 mt-1.5">
-                    Select an option with the client before booking.
-                  </p>
-                )}
-              </div>
-              <div className="border-t border-slate-100 pt-4">
-                <RevisionRequestForm onSubmit={handleRequestRevision} />
-              </div>
+              {['CONFIRMED', 'REVISION_PENDING_A', 'OPTIONS_GATHERING'].includes(detail.lead.status) ? (
+                <p className="text-sm text-slate-400">
+                  {detail.lead.status === 'CONFIRMED'
+                    ? 'This booking is confirmed. No further action is needed.'
+                    : detail.lead.status === 'REVISION_PENDING_A'
+                    ? 'Waiting on Role A to review and resend this revision request.'
+                    : 'Waiting for Ticketing Staff to submit new options.'}
+                </p>
+              ) : (
+                <>
+                  <ContactAttemptForm onSubmit={handleLogContact} />
+                  <div>
+                    <button
+                      onClick={handleConfirm}
+                      disabled={!canConfirm}
+                      className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
+                        canConfirm
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Confirm Booking
+                    </button>
+                    {!canConfirm && (
+                      <p className="text-xs text-slate-400 mt-1.5">
+                        Select an option with the client before booking.
+                      </p>
+                    )}
+                  </div>
+                  <div className="border-t border-slate-100 pt-4">
+                    <RevisionRequestForm onSubmit={handleRequestRevision} />
+                  </div>
+                </>
+              )}
             </LeadDetailPanel>
           )}
         </div>

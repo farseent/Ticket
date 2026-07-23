@@ -42,7 +42,7 @@ const leadSchema = new mongoose.Schema(
     selectedOption: { type: mongoose.Schema.Types.ObjectId, ref:'Option', default: null },
     
     pendingRevisionReason: { type: String, default: null }, // D's request, visible to A, cleared once resent
-    currentRoundInstructions: { type: String, default: null }, // what C should search for, shown once A resends
+    revisionHistory: [ { round: Number, reason: String, requestedAt: { type: Date, default: Date.now } }, ]
   },
   {
     timestamps: true, 

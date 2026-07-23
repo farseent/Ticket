@@ -8,15 +8,6 @@ export default function OptionsList({ options, selectedOptionId, onSelect, canSe
       {options.map((opt) => {
         const isSelected = selectedOptionId && String(selectedOptionId) === String(opt._id);
         const isPastRound = currentRound !== undefined && opt.round < currentRound;
-        // 🐞 Add this log to debug:
-          // console.log({
-          //   optId: opt._id,
-          //   canSelect,
-          //   isSelected,
-          //   isPastRound,
-          //   currentRound,
-          //   optRound: opt.round
-          // });
         return (
           <li
             key={opt._id}

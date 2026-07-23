@@ -25,7 +25,7 @@ export default function RevisionRequestForm({ onSubmit }) {
         type="submit"
         className="w-full bg-rose-600 text-white rounded-lg py-1.5 text-sm font-medium hover:bg-rose-700 transition-colors"
       >
-        Send Back to Role C for Revision
+        Send Back to Sales Executive for Revision
       </button>
     </form>
   );

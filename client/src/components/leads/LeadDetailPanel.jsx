@@ -3,6 +3,7 @@ import LeadPipelineMini from './LeadPipelineMini';
 import OptionsList from './OptionsList';
 import ClientInfoCard from './ClientInfoCard';
 import ErrorBanner from '../common/ErrorBanner';
+import RevisionHistoryList from './RevisionHistoryList';
 
 export default function LeadDetailPanel({ detail, error, onSelectOption, canSelectOption, showClientPhone = true, children }) {
   const selected = detail.lead.selectedOption;
@@ -21,11 +22,7 @@ export default function LeadDetailPanel({ detail, error, onSelectOption, canSele
 
       <ClientInfoCard lead={detail.lead} showPhone={showClientPhone} />
 
-      {detail.lead.currentRoundInstructions && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-3 py-2 text-sm text-blue-800">
-          <span className="font-medium">Client requested change:</span> {detail.lead.currentRoundInstructions}
-        </div>
-      )}
+      <RevisionHistoryList history={detail.lead.revisionHistory} />
 
       {selected && detail.lead.status !== 'CONFIRMED' && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm text-emerald-800">

@@ -2,7 +2,7 @@
 // never call api.get/patch directly. Keeps endpoint paths in exactly one spot.
 import api from './client';
 
-export const fetchLeads = () => api.get('/leads', { params }).then((res) => res.data);
+export const fetchLeads = ( params = {} ) => api.get('/leads', { params }).then((res) => res.data);
 
 export const fetchLeadById = (leadId) =>
   api.get(`/leads/${leadId}`).then((res) => res.data);

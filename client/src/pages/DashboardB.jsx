@@ -108,26 +108,34 @@ export default function DashboardB() {
               onSelectOption={handleSelectOption}
               canSelectOption={canSelectOption}
             >
-              <OptionForm onSubmit={handleSubmitOption} />
-              <ContactAttemptForm onSubmit={handleLogContact} />
-              <div>
-                <button
-                  onClick={handleConfirm}
-                  disabled={!canConfirm}
-                  className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
-                    canConfirm
-                      ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  }`}
-                >
-                  Confirm Booking
-                </button>
-                {!canConfirm && detail.lead.status !== 'CONFIRMED' && (
-                  <p className="text-xs text-slate-400 mt-1.5">
-                    Select an option with the client before booking.
-                  </p>
-                )}
-              </div>
+              {detail.lead.status === 'CONFIRMED' ? (
+                <p className="text-sm text-slate-400">
+                  This booking is confirmed. No further action is needed.
+                </p>
+              ) : (
+                <>
+                  <OptionForm onSubmit={handleSubmitOption} />
+                  <ContactAttemptForm onSubmit={handleLogContact} />
+                  <div>
+                    <button
+                      onClick={handleConfirm}
+                      disabled={!canConfirm}
+                      className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
+                        canConfirm
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Confirm Booking
+                    </button>
+                    {!canConfirm && (
+                      <p className="text-xs text-slate-400 mt-1.5">
+                        Select an option with the client before booking.
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </LeadDetailPanel>
           )}
         </div>

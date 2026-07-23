@@ -240,11 +240,14 @@ exports.getLeads = async (req, res, next) => {
     } else if (role === 'B') {
       filter = { assignedB: _id };
     } else if (role === 'C') {
-        if (req.query.all === 'true') {
-            filter = {}; // full history — no status restriction
-          } else {
-            filter = { status: { $in: ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING', 'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D'] } };
-          }
+      if (req.query.all === 'true') {
+        filter = { flowType: 'MULTI_AGENT' }; // full history, but still only C's own flow
+      } else {
+        filter = {
+          flowType: 'MULTI_AGENT',
+          status: { $in: ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING', 'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D'] },
+        };
+      }
     } else if (role === 'D') {
       filter = { assignedD: _id };
     }
@@ -314,14 +317,9 @@ exports.getLeadById = async (req, res, next) => {
       throw e;
     }
     
-    // Role C can view any lead currently open for option submission —
-    // this must match the OPEN_STATUSES list used in submitOption exactly,
-    // otherwise C gets locked out of leads they're still allowed to act on.
-    const C_VISIBLE_STATUSES = [
-      'DISPATCHED_C_GROUP', 'OPTIONS_GATHERING',
-      'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D',
-    ];
-    if (role === 'C' && !C_VISIBLE_STATUSES.includes(lead.status)) {
+    // Role C can view any lead that ever belonged to the multi-agent flow —
+    // matches the same scoping used in getLeads' "all" mode.
+    if (role === 'C' && lead.flowType !== 'MULTI_AGENT') {
       const e = new Error('This lead is not open to Role C');
       e.statusCode = 403;
       throw e;
@@ -497,18 +495,23 @@ exports.resendToCGroup = async (req, res, next) => {
 
     assertTransition(lead.status, 'OPTIONS_GATHERING'); // only legal from REVISION_PENDING_A
 
-    const instructions = lead.pendingRevisionReason;
-    lead.currentRoundInstructions = instructions;
+    const reason = lead.pendingRevisionReason;
+    lead.currentRevisionRound += 1;
+
+    lead.revisionHistory.push({
+      round: lead.currentRevisionRound,
+      reason,
+      requestedAt: new Date(),
+    });
+
     lead.pendingRevisionReason = null;
-    lead.currentRevisionRound += 1; // old round officially expires here
     lead.status = 'OPTIONS_GATHERING';
-    // lead.assignedD is untouched -> sticky routing applies on the next C submission
     await lead.save();
 
     await logAction({
       leadId: lead._id, actorRole: 'A', actorId: req.user._id,
       actionType: 'LEAD_RESENT_TO_C_GROUP',
-      payload: { instructions, newRound: lead.currentRevisionRound },
+      payload: { reason, newRound: lead.currentRevisionRound },
     });
 
     res.json({ lead });
