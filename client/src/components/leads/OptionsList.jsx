@@ -10,6 +10,9 @@ function OptionCard({ opt, isSelected, canSelect, onSelect }) {
         <div>
           <div className="font-medium text-sm text-slate-800 flex items-center gap-2">
             {opt.airline} — {opt.route}
+            {opt.departureAirport && opt.arrivalAirport && (
+              <span className="text-xs font-normal text-slate-400">({opt.departureAirport} → {opt.arrivalAirport})</span>
+            )}
             {isSelected && <span className="text-emerald-600 text-xs font-semibold">✓ Client agreed</span>}
           </div>
           <div className="text-xs text-slate-500 mt-0.5">

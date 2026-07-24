@@ -66,7 +66,7 @@ exports.submitOption = async (req, res, next) => {
     const lead = await Lead.findById(req.params.id).session(session);
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
-    const { airline, route, departTime, arriveTime, price, layovers, notes } = req.body;
+    const { airline, route, departureAirport, arrivalAirport, departTime, arriveTime, price, layovers, notes } = req.body;
 
     if (req.user.role === 'B') {
       if (String(lead.assignedB) !== String(req.user._id)) {
@@ -87,13 +87,13 @@ exports.submitOption = async (req, res, next) => {
       await lead.save({ session });
 
       await Option.create([{
-        lead: lead._id, submittedBy: req.user._id, round: 0,
-        airline, route, departTime, arriveTime, price, layovers, notes,
+        lead: lead._id, submittedBy: req.user._id, round: 0, // or round: lead.currentRevisionRound for C
+        airline, route, departureAirport, arrivalAirport, departTime, arriveTime, price, layovers, notes,
       }], { session });
 
       await logAction({
         leadId: lead._id, actorRole: 'B', actorId: req.user._id,
-        actionType: 'OPTION_ADDED', payload: { airline, route, price, departTime, arriveTime },
+        actionType: 'OPTION_ADDED', payload: { airline, route, departureAirport, arrivalAirport, price, departTime, arriveTime },
       });
 
       await session.commitTransaction();
@@ -115,12 +115,12 @@ exports.submitOption = async (req, res, next) => {
 
       await Option.create([{
         lead: lead._id, submittedBy: req.user._id, round: lead.currentRevisionRound,
-        airline, route, departTime, arriveTime, price, layovers, notes,
+        airline, route, departureAirport, arrivalAirport, departTime, arriveTime, price, layovers, notes,
       }], { session });
 
       await logAction({
         leadId: lead._id, actorRole: 'C', actorId: req.user._id,
-        actionType: 'OPTION_ADDED', payload: { airline, route, price, departTime, arriveTime },
+        actionType: 'OPTION_ADDED', payload: { airline, route, departureAirport, arrivalAirport, price, departTime, arriveTime },
       });
 
       let dNotifiedNow = false;

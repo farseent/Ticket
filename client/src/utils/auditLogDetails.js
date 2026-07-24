@@ -17,8 +17,9 @@ export function getActionDetail(log) {
       return 'Broadcast to all Ticketing Staff';
     case 'OPTION_ADDED': {
       if (!p.airline) return null;
+      const airports = (p.departureAirport && p.arrivalAirport) ? ` (${p.departureAirport} → ${p.arrivalAirport})` : '';
       const timing = (p.departTime || p.arriveTime) ? ` · ${p.departTime || '—'} → ${p.arriveTime || '—'}` : '';
-      return `${p.airline} — ${p.route} — $${p.price}${timing}`;
+      return `${p.airline} — ${p.route}${airports} — $${p.price}${timing}`;
     }
     case 'D_ASSIGNED':
       return p.assignedDName ? `Assigned to Ticketing Executive — ${p.assignedDName}` : 'Compiled options routed to a Ticketing Executive';
