@@ -9,7 +9,19 @@ const leadSchema = new mongoose.Schema(
     // Client Details
     clientName: { type: String, required: [true, 'Client name is required'], trim: true },
     clientPhone: { type: String, required: [true, 'Client phone number is required'], trim: true },
-    clientNotes: { type: String, default: '', required: [true, 'Client note is required'], trim: true },
+    clientNotes: { type: String, default: '',  trim: true },
+    destination: { type: String, required: true },
+    travelDate: { type: Date, required: true },
+    departureAirport: { type: String, required: true },
+    preferredTime: {
+      type: String,
+      enum: ['MORNING', 'AFTERNOON', 'EVENING', 'NIGHT', 'ANY'],
+      default: 'ANY',
+    },
+    passengers: {
+      adults: { type: Number, required: true, min: 1 },
+      children: { type: Number, default: 0, min: 0 },
+    },
 
     // Workflow Routing Details
     flowType: {
@@ -42,7 +54,20 @@ const leadSchema = new mongoose.Schema(
     selectedOption: { type: mongoose.Schema.Types.ObjectId, ref:'Option', default: null },
     
     pendingRevisionReason: { type: String, default: null }, // D's request, visible to A, cleared once resent
-    revisionHistory: [ { round: Number, reason: String, requestedAt: { type: Date, default: Date.now } }, ]
+    revisionHistory: [
+      {
+        round: Number,
+        reason: String,
+        requestedAt: { type: Date, default: Date.now },
+        fieldChanges: [
+          {
+            field: String,
+            oldValue: mongoose.Schema.Types.Mixed,
+            newValue: mongoose.Schema.Types.Mixed,
+          },
+        ],
+      },
+    ],
   },
   {
     timestamps: true, 

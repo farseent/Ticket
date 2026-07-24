@@ -28,5 +28,5 @@ export const requestRevision = (leadId, payload) =>
 export const selectOption = (leadId, optionId) =>
   api.patch(`/leads/${leadId}/select-option`, { optionId }).then((res) => res.data);
 
-export const resendToCGroup = (leadId) =>
-  api.patch(`/leads/${leadId}/resend-to-c`).then((res) => res.data);
+export const resendToCGroup = (leadId, payload) =>
+  api.patch(`/leads/${leadId}/resend-to-c`, payload).then((res) => res.data);

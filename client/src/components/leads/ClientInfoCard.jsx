@@ -1,37 +1,57 @@
+const PREFERRED_TIME_LABELS = {
+  MORNING: 'Morning',
+  AFTERNOON: 'Afternoon',
+  EVENING: 'Evening',
+  NIGHT: 'Night',
+  ANY: 'Any time',
+};
+
 export default function ClientInfoCard({ lead, showPhone = true }) {
-  if (!lead) return null;
-
   return (
-    <div className="bg-slate-50/80 border border-slate-200/80 rounded-xl p-3.5 space-y-3">
-      {/* Phone Field */}
-      {showPhone && lead.clientPhone && (
+    <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        {showPhone && (
+          <div>
+            <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Client Phone</span>
+            <div>
+              <a href={`tel:${lead.clientPhone}`} className="text-sm font-mono font-semibold text-indigo-600 hover:text-indigo-800">
+                {lead.clientPhone}
+              </a>
+            </div>
+          </div>
+        )}
         <div>
-          <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-            Client Phone
-          </span>
-          <a
-            href={`tel:${lead.clientPhone}`}
-            className="text-sm font-mono font-semibold text-indigo-600 hover:underline"
-          >
-            {lead.clientPhone}
-          </a>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Destination</span>
+          <div className="text-sm font-medium text-slate-800">{lead.destination}</div>
         </div>
-      )}
+        <div>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Travel Date</span>
+          <div className="text-sm text-slate-700">
+            {lead.travelDate ? new Date(lead.travelDate).toLocaleDateString() : '—'}
+          </div>
+        </div>
+        <div>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Departure Airport</span>
+          <div className="text-sm text-slate-700">{lead.departureAirport}</div>
+        </div>
+        <div>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Preferred Time</span>
+          <div className="text-sm text-slate-700">{PREFERRED_TIME_LABELS[lead.preferredTime] || lead.preferredTime}</div>
+        </div>
+        <div>
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Passengers</span>
+          <div className="text-sm text-slate-700">
+            {lead.passengers?.adults ?? 0} Adult{lead.passengers?.adults === 1 ? '' : 's'}
+            {lead.passengers?.children > 0 ? `, ${lead.passengers.children} Child${lead.passengers.children === 1 ? '' : 'ren'}` : ''}
+          </div>
+        </div>
+      </div>
 
-      {/* Notes Field */}
       {lead.clientNotes && (
-        <div>
-          <span className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">
-            Client Notes
-          </span>
-          <p className="text-sm text-slate-700 whitespace-pre-wrap leading-snug">
-            {lead.clientNotes}
-          </p>
+        <div className="pt-2 border-t border-slate-200">
+          <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">Client Notes</span>
+          <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap">{lead.clientNotes}</p>
         </div>
-      )}
-
-      {!lead.clientNotes && (!showPhone || !lead.clientPhone) && (
-        <p className="text-xs text-slate-400 italic">No notes or contact provided.</p>
       )}
     </div>
   );

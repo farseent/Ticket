@@ -1,4 +1,4 @@
-export default function RevisionPendingCard({ lead, onResend, busy }) {
+export default function RevisionPendingCard({ lead, onReview }) {
   return (
     <div className="bg-white border border-amber-200 rounded-xl p-4 flex items-start justify-between gap-4">
       <div>
@@ -6,11 +6,10 @@ export default function RevisionPendingCard({ lead, onResend, busy }) {
         <p className="text-sm text-slate-600 mt-1">{lead.pendingRevisionReason}</p>
       </div>
       <button
-        onClick={() => onResend(lead._id)}
-        disabled={busy}
-        className="shrink-0 bg-amber-600 text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-amber-700 transition-colors disabled:opacity-50"
+        onClick={() => onReview(lead)}
+        className="shrink-0 bg-amber-600 text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-amber-700 transition-colors"
       >
-        Resend to Ticketing Staffs
+        Review & Resend
       </button>
     </div>
   );

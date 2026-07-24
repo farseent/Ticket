@@ -11,15 +11,25 @@ exports.createLead = async (req, res, next) => {
   const session = await mongoose.startSession();
   try {
     session.startTransaction();
-    const { clientName, clientPhone, clientNotes } = req.body;
-    if (!clientName || !clientPhone) {
-      const e = new Error('clientName and clientPhone are required');
+    const { clientName, clientPhone, clientNotes,
+      destination, travelDate, departureAirport, preferredTime,
+      passengers} = req.body;
+    if (!clientName || !clientPhone || !destination || !travelDate || !departureAirport) {
+      const e = new Error('clientName, clientPhone, destination, travelDate, and departureAirport are required');
+      e.statusCode = 400;
+      throw e;
+    }
+    if (!passengers?.adults || passengers.adults < 1) {
+      const e = new Error('At least one adult passenger is required');
       e.statusCode = 400;
       throw e;
     }
 
     const lead = new Lead({
       clientName, clientPhone, clientNotes,
+      destination, travelDate, departureAirport,
+      preferredTime: preferredTime || 'ANY',
+      passengers: { adults: passengers.adults, children: passengers.children || 0 },
       status: 'NEW',
       createdBy: req.user._id,
       currentRevisionRound: 1,
@@ -501,6 +511,31 @@ exports.resendToCGroup = async (req, res, next) => {
     assertTransition(lead.status, 'OPTIONS_GATHERING'); // only legal from REVISION_PENDING_A
 
     const reason = lead.pendingRevisionReason;
+    const { destination, travelDate, departureAirport, preferredTime, passengers } = req.body;
+    const fieldChanges = [];
+    
+    const applyChange = (field, newValue, currentValue) => {
+      if (newValue === undefined || newValue === null || newValue === '') return currentValue;
+      const oldComparable = currentValue instanceof Date ? currentValue.toISOString().slice(0, 10) : currentValue;
+      if (String(oldComparable) !== String(newValue)) {
+        fieldChanges.push({ field, oldValue: oldComparable, newValue });
+        return newValue;
+      }
+      return currentValue;
+    };
+
+    lead.destination = applyChange('destination', destination, lead.destination);
+    lead.travelDate = applyChange('travelDate', travelDate, lead.travelDate);
+    lead.departureAirport = applyChange('departureAirport', departureAirport, lead.departureAirport);
+    lead.preferredTime = applyChange('preferredTime', preferredTime, lead.preferredTime);
+    
+    if (passengers) {
+      lead.passengers.adults = applyChange('passengers.adults', Number(passengers.adults), lead.passengers.adults);
+      if (passengers.children !== undefined) {
+        lead.passengers.children = applyChange('passengers.children', Number(passengers.children), lead.passengers.children);
+      }
+    }    
+    
     lead.currentRevisionRound += 1;
 
     lead.revisionHistory.push({
@@ -516,7 +551,7 @@ exports.resendToCGroup = async (req, res, next) => {
     await logAction({
       leadId: lead._id, actorRole: 'A', actorId: req.user._id,
       actionType: 'LEAD_RESENT_TO_C_GROUP',
-      payload: { reason, newRound: lead.currentRevisionRound },
+      payload: { reason, newRound: lead.currentRevisionRound, fieldChanges  },
     });
 
     res.json({ lead });
