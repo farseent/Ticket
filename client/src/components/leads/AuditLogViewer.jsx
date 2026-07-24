@@ -4,7 +4,7 @@ import { getActionDetail } from '../../utils/auditLogDetails';
 
 export default function AuditLogViewer({ logs }) {
   return (
-    <ul className="text-sm space-y-3 max-h-[28rem] overflow-y-auto">
+    <ul className="text-sm space-y-3 max-h-112 overflow-y-auto">
       {logs.map((log) => {
         const detail = getActionDetail(log);
         return (

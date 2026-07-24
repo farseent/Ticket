@@ -9,7 +9,7 @@ const leadSchema = new mongoose.Schema(
     // Client Details
     clientName: { type: String, required: [true, 'Client name is required'], trim: true },
     clientPhone: { type: String, required: [true, 'Client phone number is required'], trim: true },
-    clientNotes: { type: String, default: '', trim: true },
+    clientNotes: { type: String, default: '', required: [true, 'Client note is required'], trim: true },
 
     // Workflow Routing Details
     flowType: {

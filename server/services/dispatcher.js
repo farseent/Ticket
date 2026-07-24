@@ -36,7 +36,7 @@ async function dispatchStage1(lead, session) {
     lead.flowType = 'SINGLE_AGENT';
     lead.assignedB = chosenB._id;
     lead.status = 'DISPATCHED_B';
-    return { flowType: 'SINGLE_AGENT', assignedB: chosenB._id };
+    return { flowType: 'SINGLE_AGENT', assignedB: chosenB._id, assignedBName: chosenB.name  };
   } else {
     await state.save({ session });
 

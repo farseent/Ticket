@@ -83,7 +83,7 @@ exports.submitOption = async (req, res, next) => {
 
       await logAction({
         leadId: lead._id, actorRole: 'B', actorId: req.user._id,
-        actionType: 'OPTION_ADDED', payload: { airline, route, price },
+        actionType: 'OPTION_ADDED', payload: { airline, route, price, departTime, arriveTime },
       });
 
       await session.commitTransaction();
@@ -110,7 +110,7 @@ exports.submitOption = async (req, res, next) => {
 
       await logAction({
         leadId: lead._id, actorRole: 'C', actorId: req.user._id,
-        actionType: 'OPTION_ADDED', payload: { airline, route, price },
+        actionType: 'OPTION_ADDED', payload: { airline, route, price, departTime, arriveTime },
       });
 
       let dNotifiedNow = false;
@@ -125,7 +125,7 @@ exports.submitOption = async (req, res, next) => {
 
         await logAction({
           leadId: lead._id, actorRole: 'C', actorId: req.user._id,
-          actionType: 'D_ASSIGNED', payload: { assignedD: dUser._id },
+          actionType: 'D_ASSIGNED', payload: { assignedD: dUser._id, assignedDName: dUser.name  },
         });
       }
 
@@ -148,7 +148,10 @@ exports.submitOption = async (req, res, next) => {
 // PATCH /api/leads/:id/confirm  (Role B or D)
 exports.confirmLead = async (req, res, next) => {
   try {
-    const lead = await Lead.findById(req.params.id).populate('selectedOption');
+    const lead = await Lead.findById(req.params.id).populate({
+      path: 'selectedOption',
+      populate: { path: 'submittedBy', select: 'name role' }
+    });
     if (!lead) return res.status(404).json({ error: 'Lead not found' });
 
     if (req.user.role === 'B' && String(lead.assignedB) !== String(req.user._id)) {
@@ -180,6 +183,8 @@ exports.confirmLead = async (req, res, next) => {
         airline: lead.selectedOption.airline,
         route: lead.selectedOption.route,
         price: lead.selectedOption.price,
+        optionSubmittedByName: lead.selectedOption.submittedBy?.name || null,
+        optionSubmittedByRole: lead.selectedOption.submittedBy?.role || null,
       },
     });
 

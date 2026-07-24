@@ -10,7 +10,7 @@ export default function RevisionPendingCard({ lead, onResend, busy }) {
         disabled={busy}
         className="shrink-0 bg-amber-600 text-white text-sm font-medium rounded-lg px-4 py-2 hover:bg-amber-700 transition-colors disabled:opacity-50"
       >
-        Resend to C Group
+        Resend to Ticketing Staffs
       </button>
     </div>
   );

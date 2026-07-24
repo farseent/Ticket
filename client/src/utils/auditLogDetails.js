@@ -12,13 +12,16 @@ export function getActionDetail(log) {
 
   switch (log.actionType) {
     case 'LEAD_DISPATCHED_B':
-      return 'Assigned to a Ticketing Agent';
+      return log.payload?.assignedBName ? `Assigned to Ticketing Agent — ${log.payload.assignedBName}` : 'Assigned to a Ticketing Agent';
     case 'LEAD_DISPATCHED_C_GROUP':
       return 'Broadcast to all Ticketing Staff';
-    case 'OPTION_ADDED':
-      return p.airline ? `${p.airline} — ${p.route} — $${p.price}` : null;
+    case 'OPTION_ADDED': {
+      if (!p.airline) return null;
+      const timing = (p.departTime || p.arriveTime) ? ` · ${p.departTime || '—'} → ${p.arriveTime || '—'}` : '';
+      return `${p.airline} — ${p.route} — $${p.price}${timing}`;
+    }
     case 'D_ASSIGNED':
-      return 'Compiled options routed to a Ticketing Executive';
+      return p.assignedDName ? `Assigned to Ticketing Executive — ${p.assignedDName}` : 'Compiled options routed to a Ticketing Executive';
     case 'OPTION_SELECTED':
     case 'OPTION_SELECTION_CHANGED':
       return p.airline ? `Client agreed to: ${p.airline} — ${p.route} — $${p.price}` : null;
@@ -27,8 +30,11 @@ export function getActionDetail(log) {
         p.outcome ? `Outcome: ${OUTCOME_LABELS[p.outcome] || p.outcome}` : null,
         p.notes || null,
       ].filter(Boolean).join(' · ');
-    case 'TICKET_CONFIRMED':
-      return p.airline ? `Booked: ${p.airline} — ${p.route} — $${p.price}` : null;
+    case 'TICKET_CONFIRMED': {
+      if (!p.airline) return null;
+      const submittedBy = p.optionSubmittedByName ? ` (option submitted by ${p.optionSubmittedByName})` : '';
+      return `Booked: ${p.airline} — ${p.route} — $${p.price}${submittedBy}`;
+    }
     case 'REVISION_REQUESTED':
       return p.reason ? `Client requested: "${p.reason}"` : null;
     case 'LEAD_RESENT_TO_C_GROUP':

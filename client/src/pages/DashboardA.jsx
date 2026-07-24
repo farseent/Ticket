@@ -152,7 +152,7 @@ export default function DashboardA() {
             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400" required
           />
           <textarea
-            placeholder="Notes (optional)" value={form.clientNotes}
+            placeholder="Notes" value={form.clientNotes}
             onChange={(e) => setForm({ ...form, clientNotes: e.target.value })}
             className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
           />
