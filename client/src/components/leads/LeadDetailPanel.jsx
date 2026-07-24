@@ -5,8 +5,11 @@ import ClientInfoCard from './ClientInfoCard';
 import ErrorBanner from '../common/ErrorBanner';
 import RevisionHistoryList from './RevisionHistoryList';
 
-export default function LeadDetailPanel({ detail, error, onSelectOption, canSelectOption, showClientPhone = true, children }) {
-  const selected = detail.lead.selectedOption;
+export default function LeadDetailPanel({
+  detail, error, onSelectOption, canSelectOption, showClientPhone = true,
+  revisionHistoryMode = 'latest', children,
+}) {
+    const selected = detail.lead.selectedOption;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 space-y-5">
@@ -22,8 +25,8 @@ export default function LeadDetailPanel({ detail, error, onSelectOption, canSele
 
       <ClientInfoCard lead={detail.lead} showPhone={showClientPhone} />
 
-      <RevisionHistoryList history={detail.lead.revisionHistory} />
-
+      <RevisionHistoryList history={detail.lead.revisionHistory} mode={revisionHistoryMode} />
+      
       {selected && detail.lead.status !== 'CONFIRMED' && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 text-sm text-emerald-800">
           <span className="font-medium">Client currently agreed to:</span>{' '}

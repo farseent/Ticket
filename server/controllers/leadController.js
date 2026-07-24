@@ -511,7 +511,7 @@ exports.resendToCGroup = async (req, res, next) => {
     assertTransition(lead.status, 'OPTIONS_GATHERING'); // only legal from REVISION_PENDING_A
 
     const reason = lead.pendingRevisionReason;
-    const { destination, travelDate, departureAirport, preferredTime, passengers } = req.body;
+    const { destination, travelDate, departureAirport, preferredTime, passengers, clientNotes } = req.body;
     const fieldChanges = [];
     
     const applyChange = (field, newValue, currentValue) => {
@@ -528,6 +528,7 @@ exports.resendToCGroup = async (req, res, next) => {
     lead.travelDate = applyChange('travelDate', travelDate, lead.travelDate);
     lead.departureAirport = applyChange('departureAirport', departureAirport, lead.departureAirport);
     lead.preferredTime = applyChange('preferredTime', preferredTime, lead.preferredTime);
+    lead.clientNotes = applyChange('clientNotes', clientNotes, lead.clientNotes);
     
     if (passengers) {
       lead.passengers.adults = applyChange('passengers.adults', Number(passengers.adults), lead.passengers.adults);

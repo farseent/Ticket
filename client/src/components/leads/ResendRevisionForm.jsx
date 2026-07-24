@@ -16,6 +16,7 @@ export default function ResendRevisionForm({ lead, onSubmit, busy }) {
     preferredTime: lead.preferredTime || 'ANY',
     adults: lead.passengers?.adults ?? 1,
     children: lead.passengers?.children ?? 0,
+    clientNotes: lead.clientNotes
   });
 
   const inputClass = "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400";
@@ -28,6 +29,7 @@ export default function ResendRevisionForm({ lead, onSubmit, busy }) {
       departureAirport: form.departureAirport,
       preferredTime: form.preferredTime,
       passengers: { adults: Number(form.adults), children: Number(form.children) },
+      clientNotes: form.clientNotes
     });
   };
 
@@ -63,7 +65,11 @@ export default function ResendRevisionForm({ lead, onSubmit, busy }) {
             onChange={(e) => setForm({ ...form, children: e.target.value })} className={inputClass} />
         </div>
       </div>
-
+      <textarea
+            placeholder="Additional Notes (optional)" value={form.clientNotes}
+            onChange={(e) => setForm({ ...form, clientNotes: e.target.value })}
+            className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400"
+          />
       <button type="submit" disabled={busy}
         className="w-full bg-amber-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-amber-700 transition-colors disabled:opacity-50">
         Confirm Changes & Resend to C Group

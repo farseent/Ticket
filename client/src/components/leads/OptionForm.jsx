@@ -1,11 +1,20 @@
 import { useState } from 'react';
 
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="text-xs text-slate-500 mb-1 block">{label}</label>
+      {children}
+    </div>
+  );
+}
+
 export default function OptionForm({ onSubmit }) {
   const [form, setForm] = useState({
     airline: '', route: '', departTime: '', arriveTime: '', price: '', layovers: '', notes: '',
   });
 
-  const inputClass = "border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400";
+  const inputClass = "w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400";
   const update = (field) => (e) => setForm({ ...form, [field]: e.target.value });
 
   const handleSubmit = async (e) => {
@@ -18,12 +27,24 @@ export default function OptionForm({ onSubmit }) {
     <form onSubmit={handleSubmit} className="space-y-2">
       <h3 className="font-medium text-sm text-slate-700">Submit a Flight Option</h3>
       <div className="grid grid-cols-2 gap-2">
-        <input placeholder="Airline" value={form.airline} onChange={update('airline')} className={inputClass} required />
-        <input placeholder="Route" value={form.route} onChange={update('route')} className={inputClass} required />
-        <input type="time" placeholder="Depart Time" value={form.departTime} onChange={update('departTime')} className={inputClass} />
-        <input type="time" placeholder="Arrive Time" value={form.arriveTime} onChange={update('arriveTime')} className={inputClass} />
-        <input placeholder="Price" type="number" value={form.price} onChange={update('price')} className={inputClass} required />
-        <input placeholder="Layovers" value={form.layovers} onChange={update('layovers')} className={inputClass} />
+        <Field label="Airline">
+          <input placeholder="e.g. Emirates" value={form.airline} onChange={update('airline')} className={inputClass} required />
+        </Field>
+        <Field label="Route">
+          <input placeholder="e.g. CCJ → DXB" value={form.route} onChange={update('route')} className={inputClass} required />
+        </Field>
+        <Field label="Departure Time">
+          <input type="time" value={form.departTime} onChange={update('departTime')} className={inputClass} />
+        </Field>
+        <Field label="Arrival Time">
+          <input type="time" value={form.arriveTime} onChange={update('arriveTime')} className={inputClass} />
+        </Field>
+        <Field label="Price">
+          <input placeholder="e.g. 420" type="number" value={form.price} onChange={update('price')} className={inputClass} required />
+        </Field>
+        <Field label="Layovers">
+          <input placeholder="e.g. 1 stop in Doha" value={form.layovers} onChange={update('layovers')} className={inputClass} />
+        </Field>
       </div>
       <button type="submit" className="w-full bg-indigo-600 text-white rounded-lg py-1.5 text-sm font-medium hover:bg-indigo-700 transition-colors">
         Submit Option

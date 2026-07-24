@@ -5,8 +5,8 @@ import DispatcherStatePanel from '../components/dispatcher/DispatcherStatePanel'
 import LeadTable from '../components/leads/LeadTable';
 import LeadFilterBar from '../components/leads/LeadFilterBar';
 import AuditLogViewer from '../components/leads/AuditLogViewer';
+import ResendRevisionForm from '../components/leads/ResendRevisionForm';
 import RevisionPendingCard from '../components/leads/RevisionPendingCard';
-import ResendRevisionForm from '../components/leads/ResendRevisionForm'
 import ErrorBanner from '../components/common/ErrorBanner';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import StatCard from '../components/common/StatCard';
@@ -24,44 +24,44 @@ export default function DashboardA() {
     clientName: '', clientPhone: '', clientNotes: '',
     destination: '', travelDate: '', departureAirport: '', preferredTime: 'ANY',
     adults: 1, children: 0,
-  });  const [auditLogs, setAuditLogs] = useState(null);
+  });
+  const [auditLogs, setAuditLogs] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [reviewingLead, setReviewingLead] = useState(null);
   const [resending, setResending] = useState(false);
-
   const loadDispatcherState = async () => {
     setDispatcherState(await fetchDispatcherState());
   };
 
   useEffect(() => { loadDispatcherState(); }, []);
 
-const handleCreateLead = async (e) => {
-  e.preventDefault();
-  try {
-    await createLead({
-      clientName: form.clientName,
-      clientPhone: form.clientPhone,
-      clientNotes: form.clientNotes,
-      destination: form.destination,
-      travelDate: form.travelDate,
-      departureAirport: form.departureAirport,
-      preferredTime: form.preferredTime,
-      passengers: { adults: Number(form.adults), children: Number(form.children) },
-    });
-    setForm({
-      clientName: '', clientPhone: '', clientNotes: '',
-      destination: '', travelDate: '', departureAirport: '', preferredTime: 'ANY',
-      adults: 1, children: 0,
-    });
-    setShowCreateModal(false);
-    notifySuccess('Lead created and dispatched.');
-    await refresh();
-    await loadDispatcherState();
-  } catch (err) {
-    notifyError(err.response?.data?.error || 'Failed to create lead');
-  }
-};
+  const handleCreateLead = async (e) => {
+    e.preventDefault();
+    try {
+      await createLead({
+        clientName: form.clientName,
+        clientPhone: form.clientPhone,
+        clientNotes: form.clientNotes,
+        destination: form.destination,
+        travelDate: form.travelDate,
+        departureAirport: form.departureAirport,
+        preferredTime: form.preferredTime,
+        passengers: { adults: Number(form.adults), children: Number(form.children) },
+      });
+      setForm({
+        clientName: '', clientPhone: '', clientNotes: '',
+        destination: '', travelDate: '', departureAirport: '', preferredTime: 'ANY',
+        adults: 1, children: 0,
+      });
+      setShowCreateModal(false);
+      notifySuccess('Lead created and dispatched.');
+      await refresh();
+      await loadDispatcherState();
+    } catch (err) {
+      notifyError(err.response?.data?.error || 'Failed to create lead');
+    }
+  };
 
   const viewAuditLog = async (leadId) => {
     const data = await fetchAuditLog(leadId);
@@ -123,7 +123,11 @@ const handleCreateLead = async (e) => {
           <h2 className="font-semibold text-slate-800 mb-3">Pending Your Review</h2>
           <div className="space-y-3">
             {pendingRevisions.map((lead) => (
-              <RevisionPendingCard key={lead._id} lead={lead} onReview={setReviewingLead} />
+              <RevisionPendingCard
+                key={lead._id}
+                lead={lead}
+                onReview={setReviewingLead}
+              />
             ))}
           </div>
         </div>
@@ -229,6 +233,10 @@ const handleCreateLead = async (e) => {
             Create Lead
           </button>
         </form>
+      </Modal>
+
+      <Modal isOpen={!!auditLogs} onClose={() => setAuditLogs(null)} title="Audit Log" widthClass="max-w-lg">       
+       {auditLogs && <AuditLogViewer logs={auditLogs} />}
       </Modal>
 
       <Modal isOpen={!!reviewingLead} onClose={() => setReviewingLead(null)} title="Review Revision Request" widthClass="max-w-lg">
