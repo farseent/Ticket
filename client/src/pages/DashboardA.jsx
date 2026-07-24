@@ -13,18 +13,17 @@ import Modal from '../components/common/Modal';
 import { useLeads } from '../hooks/useLeads';
 import { createLead, fetchAuditLog, resendToCGroup } from '../api/leads';
 import { fetchDispatcherState } from '../api/dispatcher';
+import { notifySuccess, notifyError } from '../utils/toast';
 
 export default function DashboardA() {
   const { leads, loading, error, refresh } = useLeads();
   const [dispatcherState, setDispatcherState] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [form, setForm] = useState({ clientName: '', clientPhone: '', clientNotes: '' });
-  const [formError, setFormError] = useState('');
   const [auditLogs, setAuditLogs] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [resendingId, setResendingId] = useState(null);
-  const [resendError, setResendError] = useState('');
 
   const loadDispatcherState = async () => {
     setDispatcherState(await fetchDispatcherState());
@@ -34,15 +33,15 @@ export default function DashboardA() {
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
-    setFormError('');
     try {
       await createLead(form);
       setForm({ clientName: '', clientPhone: '', clientNotes: '' });
       setShowCreateModal(false);
+      notifySuccess('Lead created and dispatched.');
       await refresh();
       await loadDispatcherState();
     } catch (err) {
-      setFormError(err.response?.data?.error || 'Failed to create lead');
+      notifyError(err.response?.data?.error || 'Failed to create lead');
     }
   };
 
@@ -52,13 +51,13 @@ export default function DashboardA() {
   };
 
   const handleResend = async (leadId) => {
-    setResendError('');
     setResendingId(leadId);
     try {
       await resendToCGroup(leadId);
+      notifySuccess('Lead resent to Ticketing Staff.');
       await refresh();
     } catch (err) {
-      setResendError(err.response?.data?.error || 'Failed to resend to C group');
+      notifyError(err.response?.data?.error || 'Failed to resend to C group');
     } finally {
       setResendingId(null);
     }
@@ -103,8 +102,7 @@ export default function DashboardA() {
       {pendingRevisions.length > 0 && (
         <div className="mb-6">
           <h2 className="font-semibold text-slate-800 mb-3">Pending Your Review</h2>
-          <ErrorBanner message={resendError} />
-          <div className="space-y-3 mt-2">
+          <div className="space-y-3">
             {pendingRevisions.map((lead) => (
               <RevisionPendingCard
                 key={lead._id}
@@ -143,7 +141,6 @@ export default function DashboardA() {
 
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create New Lead">
         <form onSubmit={handleCreateLead} className="space-y-3">
-          <ErrorBanner message={formError} />
           <input
             placeholder="Client Name" value={form.clientName}
             onChange={(e) => setForm({ ...form, clientName: e.target.value })}

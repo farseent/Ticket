@@ -7,10 +7,12 @@ import OptionForm from '../components/leads/OptionForm';
 import LeadFilterBar from '../components/leads/LeadFilterBar';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorBanner from '../components/common/ErrorBanner';
 import { useLeads } from '../hooks/useLeads';
 import { useLeadDetail } from '../hooks/useLeadDetails';
 import { submitOption } from '../api/leads';
 import { useAuth } from '../hooks/useAuth';
+import { notifySuccess, notifyError } from '../utils/toast';
 
 const C_FILTERS = [
   { key: 'ALL', label: 'All' },
@@ -18,37 +20,33 @@ const C_FILTERS = [
   { key: 'CONFIRMED', label: 'Confirmed' },
 ];
 
+const OPEN_STATUSES = ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING', 'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D'];
+
 export default function DashboardC() {
   const { user } = useAuth();
-  // { all: true } pulls full history; Role C's response items are wrapped:
-  // { lead, currentRoundSubmissions, submittedByMe }
   const { leads, loading, refresh } = useLeads({ all: 'true' });
   const { detail, error, open, refresh: refreshDetail } = useLeadDetail();
-  const [actionError, setActionError] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('OPEN');
 
   const handleSelectLead = async (leadId) => {
-    setActionError('');
     await open(leadId);
   };
 
   const handleSubmitOption = async (form) => {
-    setActionError('');
     try {
       await submitOption(detail.lead._id, form);
+      notifySuccess('Flight option submitted.');
       await refreshDetail();
       await refresh();
     } catch (err) {
-      setActionError(err.response?.data?.error || 'Failed to submit option');
+      notifyError(err.response?.data?.error || 'Failed to submit option');
     }
   };
 
   const myRoundSubmissions = detail?.options.filter(
     (o) => o.round === detail.lead.currentRevisionRound && o.submittedBy?._id === user.id
   ) || [];
-
-  const OPEN_STATUSES = ['DISPATCHED_C_GROUP', 'OPTIONS_GATHERING', 'ASSIGNED_D', 'CLIENT_CONTACTED_D', 'OPTION_SELECTED_D'];
 
   const filteredLeads = useMemo(() => {
     return leads.filter((item) => {
@@ -89,9 +87,7 @@ export default function DashboardC() {
                   meta={
                     OPEN_STATUSES.includes(item.lead.status) ? (
                       <span className={`text-xs font-medium ${item.submittedByMe ? 'text-emerald-600' : 'text-amber-600'}`}>
-                        {item.submittedByMe
-                          ? '✓ You submitted an option'
-                          : `Awaiting your option · ${item.currentRoundSubmissions} submitted so far`}
+                        {item.submittedByMe ? '✓ You submitted an option' : `Awaiting your option · ${item.currentRoundSubmissions} submitted so far`}
                       </span>
                     ) : (
                       <span className="text-xs font-medium text-slate-400">Closed</span>
@@ -110,22 +106,23 @@ export default function DashboardC() {
             </div>
           )}
           {detail && (
-            <LeadDetailPanel detail={detail} error={error || actionError}>
-              {canSubmitOption ? (
-                <>
-                  {myRoundSubmissions.length > 0 && (
-                    <p className="text-xs text-emerald-600 font-medium">
-                      You've submitted {myRoundSubmissions.length} option(s) for this round.
-                    </p>
-                  )}
-                  <OptionForm onSubmit={handleSubmitOption} />
-                </>
-              ) : (
-                <p className="text-sm text-slate-400">
-                  This lead is no longer open for new options.
-                </p>
-              )}
-            </LeadDetailPanel>
+            <>
+              <ErrorBanner message={error} />
+              <LeadDetailPanel detail={detail}>
+                {canSubmitOption ? (
+                  <>
+                    {myRoundSubmissions.length > 0 && (
+                      <p className="text-xs text-emerald-600 font-medium">
+                        You've submitted {myRoundSubmissions.length} option(s) for this round.
+                      </p>
+                    )}
+                    <OptionForm onSubmit={handleSubmitOption} />
+                  </>
+                ) : (
+                  <p className="text-sm text-slate-400">This lead is no longer open for new options.</p>
+                )}
+              </LeadDetailPanel>
+            </>
           )}
         </div>
       </div>

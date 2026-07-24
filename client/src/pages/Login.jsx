@@ -1,23 +1,21 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import ErrorBanner from '../components/common/ErrorBanner';
+import { notifyError } from '../utils/toast'
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     try {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
+      notifyError(err.response?.data?.error || 'Login failed');
     }
   };
 
@@ -25,7 +23,6 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-sm border border-slate-100 w-96 space-y-4">
         <h1 className="text-xl font-bold text-slate-900">Ticket Workflow Login</h1>
-        <ErrorBanner message={error} />
         <input
           type="email" placeholder="Email" value={email}
           onChange={(e) => setEmail(e.target.value)}

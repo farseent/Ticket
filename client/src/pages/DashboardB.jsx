@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import PageContainer from '../components/layout/PageContainer';
 import Navbar from '../components/layout/Navbar';
 import LeadListItem from '../components/leads/LeadListItem';
@@ -7,64 +6,63 @@ import OptionForm from '../components/leads/OptionForm';
 import ContactAttemptForm from '../components/leads/ContactAttemptForm';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSpinner from '../components/common/LoadingSpinner';
+import ErrorBanner from '../components/common/ErrorBanner';
 import { useLeads } from '../hooks/useLeads';
 import { useLeadDetail } from '../hooks/useLeadDetails';
 import { submitOption, contactClient, confirmLead, selectOption } from '../api/leads';
+import { notifySuccess, notifyError } from '../utils/toast';
 
-// B can select/re-select an option only once contact has been logged
 const SELECTABLE_STATUSES = ['CLIENT_CONTACTED_B', 'OPTION_SELECTED_B'];
 
 export default function DashboardB() {
   const { leads, loading, refresh } = useLeads();
   const { detail, error, open, refresh: refreshDetail } = useLeadDetail();
-  const [actionError, setActionError] = useState('');
 
   const handleSelectLead = async (leadId) => {
-    setActionError('');
     await open(leadId);
   };
 
   const handleSubmitOption = async (form) => {
-    setActionError('');
     try {
       await submitOption(detail.lead._id, form);
+      notifySuccess('Flight option submitted.');
       await refreshDetail();
       await refresh();
     } catch (err) {
-      setActionError(err.response?.data?.error || 'Failed to submit option');
+      notifyError(err.response?.data?.error || 'Failed to submit option');
     }
   };
 
   const handleLogContact = async (outcome) => {
-    setActionError('');
     try {
       await contactClient(detail.lead._id, { outcome });
+      notifySuccess('Contact attempt logged.');
       await refreshDetail();
       await refresh();
     } catch (err) {
-      setActionError(err.response?.data?.error || 'Failed to log contact');
+      notifyError(err.response?.data?.error || 'Failed to log contact');
     }
   };
 
   const handleSelectOption = async (optionId) => {
-    setActionError('');
     try {
       await selectOption(detail.lead._id, optionId);
+      notifySuccess('Option selected.');
       await refreshDetail();
       await refresh();
     } catch (err) {
-      setActionError(err.response?.data?.error || 'Failed to select option');
+      notifyError(err.response?.data?.error || 'Failed to select option');
     }
   };
 
   const handleConfirm = async () => {
-    setActionError('');
     try {
       await confirmLead(detail.lead._id);
+      notifySuccess('Booking confirmed.');
       await refreshDetail();
       await refresh();
     } catch (err) {
-      setActionError(err.response?.data?.error || 'Failed to confirm booking');
+      notifyError(err.response?.data?.error || 'Failed to confirm booking');
     }
   };
 
@@ -102,41 +100,37 @@ export default function DashboardB() {
             </div>
           )}
           {detail && (
-            <LeadDetailPanel
-              detail={detail}
-              error={error || actionError}
-              onSelectOption={handleSelectOption}
-              canSelectOption={canSelectOption}
-            >
-              {detail.lead.status === 'CONFIRMED' ? (
-                <p className="text-sm text-slate-400">
-                  This booking is confirmed. No further action is needed.
-                </p>
-              ) : (
-                <>
-                  <OptionForm onSubmit={handleSubmitOption} />
-                  <ContactAttemptForm onSubmit={handleLogContact} />
-                  <div>
-                    <button
-                      onClick={handleConfirm}
-                      disabled={!canConfirm}
-                      className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
-                        canConfirm
-                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      }`}
-                    >
-                      Confirm Booking
-                    </button>
-                    {!canConfirm && (
-                      <p className="text-xs text-slate-400 mt-1.5">
-                        Select an option with the client before booking.
-                      </p>
-                    )}
-                  </div>
-                </>
-              )}
-            </LeadDetailPanel>
+            <>
+              <ErrorBanner message={error} />
+              <LeadDetailPanel
+                detail={detail}
+                onSelectOption={handleSelectOption}
+                canSelectOption={canSelectOption}
+              >
+                {detail.lead.status === 'CONFIRMED' ? (
+                  <p className="text-sm text-slate-400">This booking is confirmed. No further action is needed.</p>
+                ) : (
+                  <>
+                    <OptionForm onSubmit={handleSubmitOption} />
+                    <ContactAttemptForm onSubmit={handleLogContact} />
+                    <div>
+                      <button
+                        onClick={handleConfirm}
+                        disabled={!canConfirm}
+                        className={`w-full rounded-lg py-2 text-sm font-medium transition-colors ${
+                          canConfirm ? 'bg-emerald-600 text-white hover:bg-emerald-700' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        }`}
+                      >
+                        Confirm Booking
+                      </button>
+                      {!canConfirm && (
+                        <p className="text-xs text-slate-400 mt-1.5">Select an option with the client before booking.</p>
+                      )}
+                    </div>
+                  </>
+                )}
+              </LeadDetailPanel>
+            </>
           )}
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import ErrorBanner from '../components/common/ErrorBanner';
+import { notifyError } from '../utils/toast'
 
 const ROLES = [
   { value: 'A', label: 'Role A — Sales Executive' },
@@ -12,13 +12,11 @@ const ROLES = [
 
 export default function Signup() {
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'A' });
-  const [error, setError] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     try {
       await register(form);
       navigate('/');
@@ -33,7 +31,6 @@ export default function Signup() {
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl shadow-sm border border-slate-100 w-96 space-y-4">
         <h1 className="text-xl font-bold text-slate-900">Create Account</h1>
-        <ErrorBanner message={error} />
         <input
           placeholder="Full Name" value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
