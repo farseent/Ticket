@@ -1,9 +1,11 @@
+import { useMemo, useState } from 'react';
 import PageContainer from '../components/layout/PageContainer';
 import Navbar from '../components/layout/Navbar';
 import LeadListItem from '../components/leads/LeadListItem';
 import LeadDetailPanel from '../components/leads/LeadDetailPanel';
 import OptionForm from '../components/leads/OptionForm';
 import ContactAttemptForm from '../components/leads/ContactAttemptForm';
+import LeadFilterBar from '../components/leads/LeadFilterBar';
 import EmptyState from '../components/common/EmptyState';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorBanner from '../components/common/ErrorBanner';
@@ -14,9 +16,17 @@ import { notifySuccess, notifyError } from '../utils/toast';
 
 const SELECTABLE_STATUSES = ['CLIENT_CONTACTED_B', 'OPTION_SELECTED_B'];
 
+const B_FILTERS = [
+  { key: 'ALL', label: 'All' },
+  { key: 'ACTIVE', label: 'In progress' },
+  { key: 'CONFIRMED', label: 'Confirmed' },
+];
+
 export default function DashboardB() {
   const { leads, loading, refresh } = useLeads();
   const { detail, error, open, refresh: refreshDetail } = useLeadDetail();
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   const handleSelectLead = async (leadId) => {
     await open(leadId);
@@ -66,6 +76,17 @@ export default function DashboardB() {
     }
   };
 
+  const filteredLeads = useMemo(() => {
+    return leads.filter((lead) => {
+      const matchesSearch = lead.clientName.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus =
+        statusFilter === 'ALL' ? true :
+        statusFilter === 'ACTIVE' ? lead.status !== 'CONFIRMED' :
+        lead.status === 'CONFIRMED';
+      return matchesSearch && matchesStatus;
+    });
+  }, [leads, search, statusFilter]);
+
   const canSelectOption = detail && SELECTABLE_STATUSES.includes(detail.lead.status);
   const canConfirm = detail && !!detail.lead.selectedOption && detail.lead.status !== 'CONFIRMED';
 
@@ -75,13 +96,18 @@ export default function DashboardB() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 md:col-span-1 overflow-hidden">
           <h2 className="font-semibold text-slate-800 px-4 py-4 border-b border-slate-100">My Leads</h2>
+          <LeadFilterBar
+            search={search} onSearchChange={setSearch}
+            statusFilter={statusFilter} onStatusFilterChange={setStatusFilter}
+            filters={B_FILTERS}
+          />
           {loading ? (
             <LoadingSpinner />
-          ) : leads.length === 0 ? (
-            <EmptyState message="No leads assigned yet." />
+          ) : filteredLeads.length === 0 ? (
+            <EmptyState message="No leads match your filters." />
           ) : (
             <ul className="divide-y divide-slate-50">
-              {leads.map((lead) => (
+              {filteredLeads.map((lead) => (
                 <LeadListItem
                   key={lead._id}
                   lead={lead}
