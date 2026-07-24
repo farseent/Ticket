@@ -162,8 +162,8 @@ export default function DashboardA() {
         </form>
       </Modal>
 
-      <Modal isOpen={!!auditLogs} onClose={() => setAuditLogs(null)} title="Audit Log">
-        {auditLogs && <AuditLogViewer logs={auditLogs} />}
+      <Modal isOpen={!!auditLogs} onClose={() => setAuditLogs(null)} title="Audit Log" widthClass="max-w-lg">       
+       {auditLogs && <AuditLogViewer logs={auditLogs} />}
       </Modal>
     </PageContainer>
   );
